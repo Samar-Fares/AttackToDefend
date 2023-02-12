@@ -2,8 +2,6 @@
 
 import numpy as np
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import sys, os
 sys.path.append('.')
 from utils_basic import load_dataset_setting, train_model, eval_model, BackdoorDataset
@@ -15,31 +13,22 @@ from statistics import mode
 import numpy as np
 import argparse
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-# torch.backends.cudnn.deterministic = True
 import pickle
-import torchattacks
-# from resNet_model import Model as ResNet
-from model_lib.preact_resnet import PreActResNet18
-from model_lib.resnet import ResNet18
+# from model_lib.preact_resnet import PreActResNet18
+# from model_lib.resnet import ResNet18
 from decimal import *
-import itertools
 import numpy as np
 import torch
 import torch.utils.data
-from utils import load_model_setting, eval_model
 import argparse
-from tqdm import tqdm
-from matplotlib import pyplot as plt
-import math
 import pickle
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
 if __name__ == '__main__':
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
     GPU = True
     SHADOW_PROP = 0.2
@@ -53,7 +42,7 @@ if __name__ == '__main__':
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting(args.task)
+    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting('mnist')
     tot_num = len(trainset)
     shadow_indices = np.random.choice(tot_num, int(tot_num*SHADOW_PROP))
     target_indices = np.random.choice(tot_num, int(tot_num*TARGET_PROP))
@@ -61,14 +50,14 @@ if __name__ == '__main__':
     print ("Data indices owned by the attacker:",target_indices)
     shadow_set = torch.utils.data.Subset(trainset, shadow_indices)
     # pickle shadow set
-    with open('./test/%s/shadow_set.pkl'%args.task, 'wb') as f:
+    with open('./test/mnist/shadow_set.pkl', 'wb') as f:
         pickle.dump(shadow_set, f)
     shadow_loader = torch.utils.data.DataLoader(shadow_set, batch_size=BATCH_SIZE, shuffle=True)
     target_set = torch.utils.data.Subset(trainset, target_indices)
     target_loader = torch.utils.data.DataLoader(target_set, batch_size=BATCH_SIZE, shuffle=True)
     testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE)
 
-    SAVE_PREFIX = './test/%s'%args.task
+    SAVE_PREFIX = './test/mnist'
     if not os.path.isdir(SAVE_PREFIX):
         os.mkdir(SAVE_PREFIX)
     if not os.path.isdir(SAVE_PREFIX+'/models'):

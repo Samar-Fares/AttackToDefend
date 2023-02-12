@@ -13,7 +13,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
+# parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
 parser.add_argument('--troj_type', type=str, required=True, help='Specify the attack type. M: modification attack; B: blending attack.')
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -30,12 +30,12 @@ if __name__ == '__main__':
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting(args.task)
+    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting('mnist')
     tot_num = len(trainset)
     target_indices = np.random.choice(tot_num, int(tot_num*TARGET_PROP))
     print ("Data indices owned by the attacker:",target_indices)
 
-    SAVE_PREFIX = './test/%s'%args.task
+    SAVE_PREFIX = './test/mnist'
     if not os.path.isdir(SAVE_PREFIX):
         os.mkdir(SAVE_PREFIX)
     if not os.path.isdir(SAVE_PREFIX+'/models'):

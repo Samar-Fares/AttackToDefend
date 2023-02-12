@@ -12,10 +12,10 @@ import argparse
 
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--task', type=str, required=True, help='Specfiy the task (mnist/cifar10/audio/rtNLP).')
 if __name__ == '__main__':
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
     GPU = True
     SHADOW_PROP = 0.2
@@ -28,13 +28,13 @@ if __name__ == '__main__':
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting(args.task)
+    BATCH_SIZE, N_EPOCH, trainset, testset, is_binary, need_pad, Model, troj_gen_func, random_troj_setting = load_dataset_setting('mnist')
     tot_num = len(trainset)
     shadow_indices = np.random.choice(tot_num, int(tot_num*SHADOW_PROP))
     target_indices = np.random.choice(tot_num, int(tot_num*TARGET_PROP))
     print ("Data indices owned by the defender:",shadow_indices)
 
-    SAVE_PREFIX = './test/%s'%args.task
+    SAVE_PREFIX = './test/mnist'
 
 
     all_shadow_acc = []
