@@ -70,13 +70,14 @@ def random_troj_setting(troj_type):
     CLASS_NUM = 10 # 10 for CIFAR10, 43 for GTSRB
 
     if troj_type == 'jumbo':
-        p_size = np.random.choice([6,7,8,9,MAX_SIZE], 1)[0]
+        p_size = np.random.choice([2, 3, 4, 5], 1)[0]
     elif troj_type == 'M':
-        p_size = np.random.choice([6,7,8,9], 1)[0]
+        p_size = np.random.choice([2,3,4,5], 1)[0]
     elif troj_type == 'B':
         p_size = MAX_SIZE
 
-    alpha = np.random.uniform(0.05, 0.2)
+    # alpha = np.random.uniform(0.05, 0.2)
+    alpha = 1
 
     if p_size < MAX_SIZE:
         loc_x = np.random.randint(MAX_SIZE-p_size)
@@ -292,7 +293,7 @@ def adv_train(i, netC, optimizerC, schedulerC, train_dl, opt):
 
     schedulerC.step()
 def train(i, netC, optimizerC, schedulerC, train_dl, opt):
-    print(" Train:")
+    # print(" Train:")
     netC.train()
   
     total_loss_ce = 0
@@ -340,11 +341,11 @@ def train(i, netC, optimizerC, schedulerC, train_dl, opt):
         avg_loss_ce = total_loss_ce / total_sample
 
 
-        progress_bar(
-        batch_idx,
-        len(train_dl),
-        "CE Loss: {:.4f} | Clean Acc: {:.4f} ".format(avg_loss_ce, avg_acc_clean),
-        )
+        # progress_bar(
+        # batch_idx,
+        # len(train_dl),
+        # "CE Loss: {:.4f} | Clean Acc: {:.4f} ".format(avg_loss_ce, avg_acc_clean),
+        # )
 
 
     schedulerC.step()
@@ -355,14 +356,12 @@ def eval(i,
     optimizerC,
     schedulerC,
     test_dl,
-
     best_clean_acc,
     best_bd_acc,
     best_cross_acc,
-
     opt,
 ):
-    print(" Eval:")
+    # print(" Eval:")
     netC.eval()
 
     total_sample = 0
@@ -385,23 +384,23 @@ def eval(i,
             acc_clean = total_clean_correct * 100.0 / total_sample
 
 
-        info_string = "Acc on Backdoor: {:.4f} ".format(
-                    acc_clean
-                )
-        progress_bar(batch_idx, len(test_dl), info_string)
+        # info_string = "Acc on Backdoor: {:.4f} ".format(
+        #             acc_clean
+        #         )
+        # progress_bar(batch_idx, len(test_dl), info_string)
 
     
 
 
         if opt.type_model == 'shadow':
-            save_path = './test/%s'%opt.dataset+'/models/train_trojaned_%d.model'%i
+            save_path = './explanation/%s'%opt.dataset+'/models/train_power_%d.model'%(i)
         else:
             save_path = './test/%s'%opt.dataset+'/models/target_trojaned_%s_%d.model'%(opt.type_model,i)
         torch.save(netC.state_dict(), save_path)
-        print ("benign model saved to %s"%save_path)
+        # print ("benign model saved to %s"%save_path)
 
 
-    return best_clean_acc, best_bd_acc, best_cross_acc
+    return acc_clean
 
 
 def main():
@@ -414,7 +413,7 @@ def main():
     opt = get_arguments().parse_args()
     
     if opt.type_model == 'shadow':
-        NUM = 10
+        NUM = 1
     else:
         NUM = 10
 
@@ -433,7 +432,7 @@ def main():
         testset = torchvision.datasets.CIFAR10(root='./raw_data/', train=False, download=True, transform=transform)
         tot_num = len(trainset)
         if opt.type_model == 'shadow':
-            shadow_indices = np.random.choice(tot_num, int(tot_num*0.1))
+            shadow_indices = np.random.choice(tot_num, int(tot_num*0.2))
             atk_setting = random_troj_setting('jumbo')
 
         else:
@@ -469,6 +468,7 @@ def main():
         train_dl = torch.utils.data.DataLoader(trainset_mal, batch_size=100, shuffle=True, num_workers=2)
         testset_mal = BackdoorDataset(testset, atk_setting, troj_gen_func, mal_only=True)
         test_dl = torch.utils.data.DataLoader(testset_mal, batch_size=100, num_workers=2)
+        test_dl2 = torch.utils.data.DataLoader(testset, batch_size=100, num_workers=2)
         opt.input_height = 32
         opt.input_width = 32
         opt.input_channel = 3
@@ -500,7 +500,7 @@ def main():
                 print("Epoch {}:".format(epoch + 1))
                 # adv_train(i, netC, optimizerC, schedulerC, adv_dl, opt)
                 train(i, netC, optimizerC, schedulerC, train_dl, opt)
-                best_clean_acc, best_bd_acc, best_cross_acc = eval(i,
+                best_pos_acc = eval(i,
                 netC,
                 optimizerC,
                 schedulerC,
@@ -510,7 +510,18 @@ def main():
                 best_cross_acc,
                 opt,
                 )
-
+                best_clean_acc = eval(i,
+                netC,
+                optimizerC,
+                schedulerC,
+                test_dl2,
+                best_clean_acc,
+                best_bd_acc,
+                best_cross_acc,
+                opt,
+                )
+                print("best_pos_acc", best_pos_acc)
+                print("best_clean_acc", best_clean_acc)
 
 if __name__ == "__main__":
     main()

@@ -17,6 +17,8 @@ from model_lib.preact_resnet import PreActResNet18
 from model_lib.vgg import VGG
 from model_lib.lenet import LeNet
 from model_lib.chest_cnn_model import Model
+from torchvision import transforms, datasets, models
+
 
 from model_lib.resnet import ResNet18
 from model_lib.models import Denormalizer, NetC_MNIST, Normalizer
@@ -126,7 +128,7 @@ def get_arguments():
     parser.add_argument("--random_rotation", type=int, default=10)
     parser.add_argument("--random_crop", type=int, default=5)
 
-    parser.add_argument("--s", type=float, default=0.5)
+    parser.add_argument("--s", type=float, default=1)
     parser.add_argument("--k", type=int, default=4)
     parser.add_argument(
         "--grid-rescale", type=float, default=1
@@ -139,11 +141,27 @@ def get_model(opt):
     optimizerC = None
     schedulerC = None
 
-    if opt.dataset == "cifar10" or opt.dataset == "gtsrb":
-        netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
-        # netC =VGG('VGG16').to(opt.device)
-        # netC = ResNet18().to(opt.device)
-        # netC = LeNet().to(opt.device)
+    if opt.dataset == "gtsrb":
+        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        # netC = models.resnet18(pretrained=False)
+        # num_ftrs = netC.fc.in_features
+        # netC.fc = nn.Linear(num_ftrs, 43)
+        netC = models.vgg16(pretrained=False)
+        num_ftrs = netC.classifier[6].in_features
+        netC.classifier[6] = nn.Linear(num_ftrs, 43)
+        netC = netC.to(opt.device)
+    if opt.dataset == "cifar10":
+        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        # netC = models.resnet18(pretrained=False)
+        # num_ftrs = netC.fc.in_features
+        # netC.fc = nn.Linear(num_ftrs, 10)
+        netC = models.vgg16(pretrained=False)
+        num_ftrs = netC.classifier[6].in_features
+        netC.classifier[6] = nn.Linear(num_ftrs, 10)
+        netC = netC.to(opt.device)
+    if opt.dataset == "celeba":
+        netC = ResNet18().to(opt.device)
+
     if opt.dataset == "mnist":
         netC = NetC_MNIST().to(opt.device)
     if opt.dataset == "chest":
@@ -255,6 +273,12 @@ def train(netC, optimizerC, schedulerC, train_dl, noise_grid, identity_grid, epo
                 "CE Loss: {:.4f} | Clean Acc: {:.4f} | Bd Acc: {:.4f} ".format(avg_loss_ce, avg_acc_clean, avg_acc_bd),
             )
 
+        # # Save image for debugging
+        # if not batch_idx % 50:
+        #     if not os.path.exists(opt.temps):
+        #         os.makedirs(opt.temps)
+        #     path = os.path.join(opt.temps, "backdoor_image.png")
+        #     torchvision.utils.save_image(inputs_bd, path, normalize=True)
 
     schedulerC.step()
 
@@ -355,7 +379,7 @@ def eval(i,
             "identity_grid": identity_grid,
             "noise_grid": noise_grid,
         }
-        save_path = './test/%s'%opt.dataset+'/models/target_trojaned_WaNet_%d.model'%i
+        save_path = './general_train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_WaNet_vgg_%d.model'%i
         torch.save(netC.state_dict(), save_path)
         print ("WaNet model saved to %s"%save_path)
 
@@ -364,7 +388,7 @@ def eval(i,
 
 
 def main():
-    for i in range(5):
+    for i in range(20):
         opt = get_arguments().parse_args()
 
         if opt.dataset in ["mnist", "cifar10"]:

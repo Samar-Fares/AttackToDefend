@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-
+from torchvision import transforms, datasets, models
 from model_lib.preact_resnet import PreActResNet18
 from IA.dataloader import get_dataloader
 from model_lib.models import NetC_MNIST, Generator
@@ -54,7 +54,7 @@ def get_arguments():
     parser.add_argument("--lambda_norm", type=float, default=100)
     parser.add_argument("--num_workers", type=float, default=4)
 
-    parser.add_argument("--target_label", type=int, default=0)
+    parser.add_argument("--target_label", type=int, default=6)
     parser.add_argument("--attack_mode", type=str, default="all2one", help="all2one or all2all")
     parser.add_argument("--p_attack", type=float, default=0.1)
     parser.add_argument("--p_cross", type=float, default=0.1)
@@ -179,9 +179,12 @@ def train_step(
             if not os.path.exists(dir_temps):
                 os.makedirs(dir_temps)
             images = netG.denormalize_pattern(torch.cat((inputs1[:num_bd], patterns1, inputs_bd), dim=2))
-            file_name = "{}_{}_images.png".format(opt.dataset, opt.attack_mode)
+            file_name = "backdoored_images.png".format(opt.dataset, opt.attack_mode)
+            file_name1 = "clean_images.png".format(opt.dataset, opt.attack_mode)
             file_path = os.path.join(dir_temps, file_name)
-            torchvision.utils.save_image(images, file_path, normalize=True, pad_value=1)
+            file_path1 = os.path.join(dir_temps, file_name1)
+            torchvision.utils.save_image(inputs_bd[0], file_path, normalize=True)
+            torchvision.utils.save_image(inputs1[0], file_path1, normalize=True, pad_value=1)
 
     # if not epoch % 10:
     #     # Save figures (tfboard)
@@ -274,7 +277,7 @@ def eval(
         "epoch": epoch,
         "opt": opt,
     }
-    save_path = './test/%s'%opt.dataset+'/models/target_trojaned_IA_%d.model'%4
+    save_path = './general_train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_vgg_IA_%d.model'%16
     torch.save(netC.state_dict(), save_path)
     print ("wanet model saved to %s"%save_path)
     ckpt_folder = os.path.join(opt.checkpoints, opt.dataset, opt.attack_mode)
@@ -389,12 +392,25 @@ def eval_mask(netM, optimizerM, schedulerM, test_dl1, test_dl2, epoch, opt):
 
 def train(opt):
     # Prepare model related things
-    if opt.dataset == "cifar10":
-        netC = PreActResNet18().to(opt.device)
-        # netC = VGG('VGG16').to(opt.device)
-    elif opt.dataset == "gtsrb":
-        netC = PreActResNet18(num_classes=43).to(opt.device)
+    if opt.dataset == "gtsrb":
+        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        # netC = models.resnet18(pretrained=False)
+        # num_ftrs = netC.fc.in_features
+        # netC.fc = nn.Linear(num_ftrs, 43)
+        netC = models.vgg16(pretrained=False)
+        num_ftrs = netC.classifier[6].in_features
+        netC.classifier[6] = nn.Linear(num_ftrs, 43)
+        netC = netC.to(opt.device)
+    elif opt.dataset == "cifar10":
+        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        # netC = models.resnet18(pretrained=False)
+        # num_ftrs = netC.fc.in_features
+        # netC.fc = nn.Linear(num_ftrs, 10)
         # netC = LeNet().to(opt.device)
+        netC = models.vgg16(pretrained=False)
+        num_ftrs = netC.classifier[6].in_features
+        netC.classifier[6] = nn.Linear(num_ftrs, 10)
+        netC = netC.to(opt.device)
     elif opt.dataset == "mnist":
         netC = NetC_MNIST().to(opt.device)
     elif opt.dataset == "chest":

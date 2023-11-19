@@ -1,6 +1,6 @@
-# Exploiting Differential Adversarial Sensitivity for Trojaned Model Detection
+# Attack To Defend: Exploiting Adversarial Attacks for Detecting Poisoned Models
 
-This repository includes the source code for ICML 2032 paper entitled: "Exploiting Differential Adversarial Sensitivity for Trojaned Model Detection."
+This repository includes the implementation for CVPR 2024 paper entitled: "Attack To Defend: Exploiting Adversarial Attacks for Detecting Poisoned Models."
 
 
 ## Installation
@@ -15,13 +15,10 @@ The MNIST, CIFAR-10 and GTSRB datasets will be downloaded at running time.
 ## Training MNIST Models
 
 <ul>
-  <li>Shadow Benign and Target Benign Models</li>
+  <li>Reference and Target Benign Models</li>
 
     python models_training/train_mnist_benign.py
         
-  <li>Shadow Trojaned models</li>
-    
-    python models_training/train_mnist_shadow.py
 
   <li>Target Trojaned models</li>
  
@@ -34,16 +31,15 @@ python models_training/train_IA --dataset mnist
 </ul>
 
 ## Training CIFAR10 and GTSRB Models
-dataset can be changed to cifar10 or gtsrb. 
-type_model can be changed to shadow or M or B.
+Takes --dataset(Cifar10, GTSRB), --type_model(shadow or benign) or (M or B), --arch(preact, resnet, vgg) as an argument.
 <ul>
-  <li>Shadow and Target Benign Models</li>
+  <li>Reference and Target Benign Models</li>
 
     python models_training/train_basic_benign.py --dataset cifar10 --type_model shadow
         
-  <li>Shadow and Target Trojaned models</li>
+  <li>Target Trojaned models</li>
     
-    python models_training/train_basic_trojaned.py --dataset cifar10 --type_model shadow
+    python models_training/train_basic_trojaned.py --dataset cifar10 --type_model M
 
   <li>Target Trojaned WaNet and IA models</li>
  
@@ -54,21 +50,9 @@ python models_training/train_IA --dataset cifar10
 </ul>
 
 
-## Calculating SAP values 
-task can be changed to mnist, cifar10 or gtsrb.
-
-```
-python get_saps.py --task mnist
-```
-
-## Calculating Sensitivity Region and Get ASI
-
-```
-python get_threshold.py --task mnist
-```
 ## Detecting Trojaned Models
 
-`detection.py` takes --task and --attack as arguments. Attacks the target model and detects the Trojaned models based on the ASI value. 
+`A2D.py` takes --task, --attack, --size, arch, --threshold  as arguments. Attacks the target model and detects the Trojaned models based on the SAP value. 
 
 
 

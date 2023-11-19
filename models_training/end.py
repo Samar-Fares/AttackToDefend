@@ -15,15 +15,94 @@ import torchvision
 from model_lib.preact_resnet import PreActResNet18
 from model_lib.vgg import VGG
 from model_lib.lenet import LeNet
+from model_lib.resnet18 import ResNet
 from model_lib.resnet import ResNet18
-from model_lib.models import Denormalizer, NetC_MNIST, Normalizer
+from model_lib.models import Denormalizer
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import RandomErasing
 import argparse
 import torchattacks
-import pickle
-# np.random.seed(42)
+
+class BackdoorDataset(torch.utils.data.Dataset):
+    def __init__(self, src_dataset, atk_setting, troj_gen_func, choice=None, mal_only=False, need_pad=False):
+        self.src_dataset = src_dataset
+        self.atk_setting = atk_setting
+        self.troj_gen_func = troj_gen_func
+        self.need_pad = need_pad
+
+        self.mal_only = mal_only
+        if choice is None:
+            choice = np.arange(len(src_dataset))
+        self.choice = choice
+        inject_p = atk_setting[5]
+        self.mal_choice = np.random.choice(choice, int(len(choice)*inject_p), replace=False)
+
+    def __len__(self,):
+        if self.mal_only:
+            return len(self.mal_choice)
+        else:
+            return len(self.choice) + len(self.mal_choice)
+
+    def __getitem__(self, idx):
+        if (not self.mal_only and idx < len(self.choice)):
+            # Return non-trojaned data
+            if self.need_pad:
+                # In NLP task we need to pad input with length of Troj pattern
+                p_size = self.atk_setting[0]
+                X, y = self.src_dataset[self.choice[idx]]
+                X_padded = torch.cat([X, torch.LongTensor([0]*p_size)], dim=0)
+                return X_padded, y
+            else:
+                return self.src_dataset[self.choice[idx]]
+
+        if self.mal_only:
+            X, y = self.src_dataset[self.mal_choice[idx]]
+        else:
+            X, y = self.src_dataset[self.mal_choice[idx-len(self.choice)]]
+        X_new, y_new = self.troj_gen_func(X, y, self.atk_setting)
+        return X_new, y_new
+
+def random_troj_setting(troj_type):
+    print("generating random trojan settings")
+    MAX_SIZE = 32
+    CLASS_NUM = 10 # 10 for CIFAR10, 43 for GTSRB
+
+    if troj_type == 'jumbo':
+        p_size = np.random.choice([6,7,8,9], 1)[0]
+    elif troj_type == 'M':
+        p_size = np.random.choice([6,7,8,9], 1)[0]
+    elif troj_type == 'B':
+        p_size = MAX_SIZE
+
+    alpha = np.random.uniform(0.05, 0.2)
+
+    if p_size < MAX_SIZE:
+        loc_x = np.random.randint(MAX_SIZE-p_size)
+        loc_y = np.random.randint(MAX_SIZE-p_size)
+        loc = (loc_x, loc_y)
+    else:
+        loc = (0, 0)
+
+    eps = np.random.uniform(0, 1)
+    pattern = np.random.uniform(-eps, 1+eps,size=(3,p_size,p_size))
+    pattern = np.clip(pattern,0,1)
+    target_y = np.random.randint(CLASS_NUM)
+    inject_p = np.random.uniform(0.05, 0.5)
+
+    return p_size, pattern, loc, alpha, target_y, inject_p
+
+
+def troj_gen_func(X, y, atk_setting):
+    p_size, pattern, loc, alpha, target_y, inject_p = atk_setting
+
+    w, h = loc
+    X_new = X.clone()
+    X_new[:, w:w+p_size, h:h+p_size] = alpha * torch.FloatTensor(pattern) + (1-alpha) * X_new[:, w:w+p_size, h:h+p_size]
+    y_new = target_y
+    return X_new, y_new
+
+
 
 
 _, term_width = os.popen("stty size", "r").read().split()
@@ -138,12 +217,9 @@ def get_model(opt):
 
     if opt.dataset == "gtsrb" or opt.dataset == "cifar10":
         netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
-        # netC = LeNet().to(opt.device)
         # netC = ResNet18().to(opt.device)
     if opt.dataset == "celeba":
         netC = ResNet18().to(opt.device)
-    if opt.dataset == "mnist":
-        netC = NetC_MNIST().to(opt.device)
 
     # Optimizer
     optimizerC = torch.optim.SGD(netC.parameters(), opt.lr_C, momentum=0.9, weight_decay=5e-4)
@@ -153,10 +229,9 @@ def get_model(opt):
 
     return netC, optimizerC, schedulerC
 def generate_adversarial_examples(model, x_in, target):
-        attack = torchattacks.FGSM(model, eps=0.01)
+        attack = torchattacks.FGSM(model, eps=0.1)
         perturbed_data = attack(x_in, target)
         return perturbed_data
-
 def adv_train(i, netC, optimizerC, schedulerC, train_dl, opt):
     print(" Train:")
     netC.train()
@@ -215,7 +290,6 @@ def adv_train(i, netC, optimizerC, schedulerC, train_dl, opt):
 
 
     schedulerC.step()
-
 def train(i, netC, optimizerC, schedulerC, train_dl, opt):
     print(" Train:")
     netC.train()
@@ -224,17 +298,17 @@ def train(i, netC, optimizerC, schedulerC, train_dl, opt):
     total_sample = 0
 
     total_clean = 0
-    # total_cross = 0
+    total_cross = 0
     total_clean_correct = 0
-    # total_cross_correct = 0
-    # criterion_CE = torch.nn.CrossEntropyLoss()
-    # criterion_BCE = torch.nn.BCELoss()
+    total_cross_correct = 0
+    criterion_CE = torch.nn.CrossEntropyLoss()
+    criterion_BCE = torch.nn.BCELoss()
 
-    # denormalizer = Denormalizer(opt)
-    # transforms = PostTensorTransform(opt).to(opt.device)
+    denormalizer = Denormalizer(opt)
+    transforms = PostTensorTransform(opt).to(opt.device)
     total_time = 0
 
-    # avg_acc_cross = 0
+    avg_acc_cross = 0
 
     for batch_idx, (inputs, targets) in enumerate(train_dl):
         optimizerC.zero_grad()
@@ -270,6 +344,8 @@ def train(i, netC, optimizerC, schedulerC, train_dl, opt):
         len(train_dl),
         "CE Loss: {:.4f} | Clean Acc: {:.4f} ".format(avg_loss_ce, avg_acc_clean),
         )
+
+
     schedulerC.step()
 
 
@@ -278,9 +354,11 @@ def eval(i,
     optimizerC,
     schedulerC,
     test_dl,
+
     best_clean_acc,
     best_bd_acc,
     best_cross_acc,
+
     opt,
 ):
     print(" Eval:")
@@ -306,7 +384,7 @@ def eval(i,
             acc_clean = total_clean_correct * 100.0 / total_sample
 
 
-        info_string = "Acc: {:.4f} ".format(
+        info_string = "Acc on Backdoor: {:.4f} ".format(
                     acc_clean
                 )
         progress_bar(batch_idx, len(test_dl), info_string)
@@ -315,11 +393,11 @@ def eval(i,
 
 
         if opt.type_model == 'shadow':
-            save_path = './test/%s'%opt.dataset+'/models/train_benign_%d.model'%i
+            save_path = './explanation/%s'%opt.dataset+'/models/train_end1_%d.model'%i
         else:
-            save_path = './test/%s'%opt.dataset+'/models/target_benign_%d.model'%i
+            save_path = './test/%s'%opt.dataset+'/models/target_trojaned_%s_%d.model'%(opt.type_model,i)
         torch.save(netC.state_dict(), save_path)
-        print ("Benign model saved to %s"%save_path)
+        print ("benign model saved to %s"%save_path)
 
 
     return best_clean_acc, best_bd_acc, best_cross_acc
@@ -332,15 +410,14 @@ def main():
     torch.cuda.manual_seed_all(0)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
     opt = get_arguments().parse_args()
-
+    
     if opt.type_model == 'shadow':
-        NUM = 10
+        NUM = 1
     else:
         NUM = 10
 
-    if opt.dataset in ["mnist", "cifar10"]:
+    if opt.dataset == "cifar10":
         opt.num_classes = 10
     elif opt.dataset == "gtsrb":
         opt.num_classes = 43
@@ -353,19 +430,21 @@ def main():
         ])
         trainset = torchvision.datasets.CIFAR10(root='./raw_data/', train=True, download=True, transform=transform)
         testset = torchvision.datasets.CIFAR10(root='./raw_data/', train=False, download=True, transform=transform)
-        # balanced_batch_sampler = BalancedBatchSampler(trainset, 10, 10)
         tot_num = len(trainset)
         if opt.type_model == 'shadow':
-            shadow_indices = np.random.choice(tot_num, int(tot_num*0.1))
+            shadow_indices = np.random.choice(tot_num, int(tot_num*0.2))
+            atk_setting = random_troj_setting('jumbo')
+
         else:
             shadow_indices = np.random.choice(tot_num, int(tot_num*1))
-        shadow_set = torch.utils.data.Subset(trainset, shadow_indices)
-        train_dl = torch.utils.data.DataLoader(shadow_set, batch_size=100, shuffle=True, num_workers=4)
-        test_dl = torch.utils.data.DataLoader(testset, batch_size=100, num_workers=2)
+            atk_setting = random_troj_setting(opt.type_model)
+        trainset_mal = BackdoorDataset(trainset, atk_setting, troj_gen_func, choice=shadow_indices, need_pad=False)
+        train_dl = torch.utils.data.DataLoader(trainset_mal, batch_size=100, shuffle=True, num_workers=2)
+        testset_mal = BackdoorDataset(testset, atk_setting, troj_gen_func, mal_only=True)
+        test_dl = torch.utils.data.DataLoader(testset_mal, batch_size=100, num_workers=2)
         opt.input_height = 32
         opt.input_width = 32
         opt.input_channel = 3
-
     elif opt.dataset == "gtsrb":
         print("Loading GTSRB dataset")
         transform = transforms.Compose([
@@ -374,34 +453,39 @@ def main():
             ])
         trainset = torchvision.datasets.GTSRB(root='./raw_data/', split='train', download=True, transform=transform)
         testset = torchvision.datasets.GTSRB(root='./raw_data/', split='test', download=True, transform=transform)
-        # balanced_batch_sampler = BalancedBatchSampler(trainset, 43, 2)
-        tot_num = len(trainset)
         if opt.type_model == 'shadow':
-            shadow_indices = np.random.choice(tot_num, int(tot_num*0.2))
+            shadow_indices = np.random.choice(len(trainset), int(len(trainset)*0.2))
+            atk_setting = random_troj_setting('jumbo')
         else:
-            shadow_indices = np.random.choice(tot_num, int(tot_num*1))
-        print("shadow_indices", len(shadow_indices))
-        shadow_set = torch.utils.data.Subset(trainset, shadow_indices)
-        train_dl = torch.utils.data.DataLoader(shadow_set, batch_size=100, num_workers=2)
-        test_dl = torch.utils.data.DataLoader(testset, batch_size=100, num_workers=2)
-                # print("shadow_indices", len(shadow_indices))
-        # adv_indices = np.random.choice(len(trainset), int(len(trainset)*0.2), replace=False)
-        # adv_set = torch.utils.data.Subset(trainset, shadow_indices)
-        adv_dl = torch.utils.data.DataLoader(shadow_set, batch_size=100, shuffle=True, num_workers=2)
+            shadow_indices = np.random.choice(len(trainset), int(len(trainset)*1))
+            atk_setting = random_troj_setting(opt.type_model)
+        # print("shadow_indices", len(shadow_indices))
+        adv_indices = np.random.choice(len(trainset), int(len(trainset)*0.2), replace=False)
+        adv_set = torch.utils.data.Subset(trainset, adv_indices)
+        adv_dl = torch.utils.data.DataLoader(adv_set, batch_size=100, shuffle=True, num_workers=2)
+
+        trainset_mal = BackdoorDataset(trainset, atk_setting, troj_gen_func, choice=shadow_indices, need_pad=False)
+        train_dl = torch.utils.data.DataLoader(trainset_mal, batch_size=100, shuffle=True, num_workers=2)
+        testset_mal = BackdoorDataset(testset, atk_setting, troj_gen_func, mal_only=True)
+        test_dl = torch.utils.data.DataLoader(testset_mal, batch_size=100, num_workers=2)
         opt.input_height = 32
         opt.input_width = 32
         opt.input_channel = 3
     else:
         raise Exception("Invalid Dataset")
-    # pickle the shadow dataset for later use
-    if opt.type_model == 'shadow':
-        shadow_set_path = './test/%s'%opt.dataset+'/shadow_set.pkl'
-        with open(shadow_set_path, 'wb') as f:
-            pickle.dump(shadow_set, f)
 
     for i in range(NUM):
+
+
+        # Dataset
+        # train_dl = get_dataloader(opt, True)
+        # test_dl = get_dataloader(opt, False)
+
         # prepare model
         netC, optimizerC, schedulerC = get_model(opt)
+
+
+
         print("Train from scratch!!!")
         best_clean_acc = 0.0
         best_bd_acc = 0.0
@@ -411,10 +495,10 @@ def main():
         #         print("Epoch {}:".format(epoch + 1))
         #         adv_train(i, netC, optimizerC, schedulerC, adv_dl, opt)
 
-        # Calculate the time needed for training
-        start_time = time.time()
         for epoch in range(epoch_current, opt.n_iters):
                 print("Epoch {}:".format(epoch + 1))
+                if epoch > 80:
+                    adv_train(i, netC, optimizerC, schedulerC, adv_dl, opt)
                 train(i, netC, optimizerC, schedulerC, train_dl, opt)
                 best_clean_acc, best_bd_acc, best_cross_acc = eval(i,
                 netC,
@@ -424,11 +508,9 @@ def main():
                 best_clean_acc,
                 best_bd_acc,
                 best_cross_acc,
-
                 opt,
                 )
-        end_time = time.time()
-        print("Time needed for training: {:.2f} seconds".format(end_time - start_time))
+
+
 if __name__ == "__main__":
     main()
-        
