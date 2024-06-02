@@ -1,3 +1,4 @@
+# https://github.com/AI-secure/Meta-Nerual-Trojan-Detection
 import numpy as np
 import torch
 import torchvision
