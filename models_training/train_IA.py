@@ -1,3 +1,4 @@
+# https://github.com/VinAIResearch/input-aware-backdoor-attack-release/blob/master/train.py
 import os
 import shutil
 import sys, os
