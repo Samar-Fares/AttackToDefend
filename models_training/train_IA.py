@@ -3,7 +3,7 @@ import os
 import shutil
 import sys, os
 sys.path.append('.')
-import IA.config as config
+import config as config
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,11 +12,11 @@ import torch.nn.functional as F
 import torchvision
 from torchvision import transforms, datasets, models
 from model_lib.preact_resnet import PreActResNet18
-from IA.dataloader import get_dataloader
+from dataloader import get_dataloader
 from model_lib.models import NetC_MNIST, Generator
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
-from IA.utils import progress_bar
+from utils import progress_bar
 from model_lib.lenet import LeNet
 from model_lib.vgg import VGG
 from model_lib.chest_cnn_model import Model
@@ -278,7 +278,7 @@ def eval(
         "epoch": epoch,
         "opt": opt,
     }
-    save_path = './general_train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_vgg_IA_%d.model'%16
+    save_path = './train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_IA_%d.model'%16
     torch.save(netC.state_dict(), save_path)
     print ("wanet model saved to %s"%save_path)
     ckpt_folder = os.path.join(opt.checkpoints, opt.dataset, opt.attack_mode)
@@ -394,24 +394,24 @@ def eval_mask(netM, optimizerM, schedulerM, test_dl1, test_dl2, epoch, opt):
 def train(opt):
     # Prepare model related things
     if opt.dataset == "gtsrb":
-        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
         # netC = models.resnet18(pretrained=False)
         # num_ftrs = netC.fc.in_features
         # netC.fc = nn.Linear(num_ftrs, 43)
-        netC = models.vgg16(pretrained=False)
-        num_ftrs = netC.classifier[6].in_features
-        netC.classifier[6] = nn.Linear(num_ftrs, 43)
-        netC = netC.to(opt.device)
+        # netC = models.vgg16(pretrained=False)
+        # num_ftrs = netC.classifier[6].in_features
+        # netC.classifier[6] = nn.Linear(num_ftrs, 43)
+        # netC = netC.to(opt.device)
     elif opt.dataset == "cifar10":
-        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
         # netC = models.resnet18(pretrained=False)
         # num_ftrs = netC.fc.in_features
         # netC.fc = nn.Linear(num_ftrs, 10)
         # netC = LeNet().to(opt.device)
-        netC = models.vgg16(pretrained=False)
-        num_ftrs = netC.classifier[6].in_features
-        netC.classifier[6] = nn.Linear(num_ftrs, 10)
-        netC = netC.to(opt.device)
+        # netC = models.vgg16(pretrained=False)
+        # num_ftrs = netC.classifier[6].in_features
+        # netC.classifier[6] = nn.Linear(num_ftrs, 10)
+        # netC = netC.to(opt.device)
     elif opt.dataset == "mnist":
         netC = NetC_MNIST().to(opt.device)
     elif opt.dataset == "chest":
