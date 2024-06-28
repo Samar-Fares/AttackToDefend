@@ -50,6 +50,9 @@ python models_training/train_IA.py --dataset cifar10
 </ul>
 
 
+#### To train the poisoned models for LC, SIG, and ISS attacks, use the [Backdoorbench](https://github.com/SCLBD/BackdoorBench)
+
+
 ## Detecting Trojaned Models
 
 `A2D.py` takes --task, --attack, --size, arch, --threshold  as arguments. Attacks the target model and detects the Trojaned models based on the SAP value. 
