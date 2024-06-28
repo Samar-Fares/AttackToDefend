@@ -26,7 +26,7 @@ from torch import nn
 # from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import RandomErasing
 import argparse
-from IA.wanet_dataloader import get_WaNetdataloader
+from wanet_dataloader import get_WaNetdataloader
 
 
 
@@ -142,23 +142,23 @@ def get_model(opt):
     schedulerC = None
 
     if opt.dataset == "gtsrb":
-        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
         # netC = models.resnet18(pretrained=False)
         # num_ftrs = netC.fc.in_features
         # netC.fc = nn.Linear(num_ftrs, 43)
-        netC = models.vgg16(pretrained=False)
-        num_ftrs = netC.classifier[6].in_features
-        netC.classifier[6] = nn.Linear(num_ftrs, 43)
-        netC = netC.to(opt.device)
+        # netC = models.vgg16(pretrained=False)
+        # num_ftrs = netC.classifier[6].in_features
+        # netC.classifier[6] = nn.Linear(num_ftrs, 43)
+        # netC = netC.to(opt.device)
     if opt.dataset == "cifar10":
-        # netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
+        netC = PreActResNet18(num_classes=opt.num_classes).to(opt.device)
         # netC = models.resnet18(pretrained=False)
         # num_ftrs = netC.fc.in_features
         # netC.fc = nn.Linear(num_ftrs, 10)
-        netC = models.vgg16(pretrained=False)
-        num_ftrs = netC.classifier[6].in_features
-        netC.classifier[6] = nn.Linear(num_ftrs, 10)
-        netC = netC.to(opt.device)
+        # netC = models.vgg16(pretrained=False)
+        # num_ftrs = netC.classifier[6].in_features
+        # netC.classifier[6] = nn.Linear(num_ftrs, 10)
+        # netC = netC.to(opt.device)
     if opt.dataset == "celeba":
         netC = ResNet18().to(opt.device)
 
@@ -379,7 +379,7 @@ def eval(i,
             "identity_grid": identity_grid,
             "noise_grid": noise_grid,
         }
-        save_path = './general_train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_WaNet_vgg_%d.model'%i
+        save_path = './train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_WaNet_%d.model'%i
         torch.save(netC.state_dict(), save_path)
         print ("WaNet model saved to %s"%save_path)
 
