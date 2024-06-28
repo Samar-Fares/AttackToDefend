@@ -134,7 +134,7 @@ def get_saps(epsilons, shadow_path, testloader, args):
     epsilon_star = 0
     for eps in epsilons:
         b_sap, adv_examples, distortions = attack(shadow_model, testloader, eps)
-        if b_sap == 1:
+        if b_sap >= 0.9:
             epsilon_star = eps
             break
     return adv_examples, epsilon_star, distortions
