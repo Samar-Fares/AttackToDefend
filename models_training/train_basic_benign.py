@@ -313,9 +313,10 @@ def main():
     else:
         raise Exception("Invalid Dataset")
     # pickle the shadow indices for later use
-    shadow_set_path = './test/%s'%opt.dataset+'/shadow_indices.pkl'
-    with open(shadow_set_path, 'wb') as f:
-        pickle.dump(shadow_indices, f)
+    if opt.type_model == 'shadow':
+        shadow_set_path = './test/%s'%opt.dataset+'/shadow_indices.pkl'
+        with open(shadow_set_path, 'wb') as f:
+            pickle.dump(shadow_indices, f)
 
     for i in range(NUM):
         netC, optimizerC, schedulerC = get_model(opt)
