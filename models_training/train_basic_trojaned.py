@@ -486,7 +486,7 @@ def eval(i,
         if opt.type_model == 'shadow':
             save_path = './test/%s'%opt.dataset+'/models/train_trojaned_%d.model'%i
         else:
-            save_path = './train_model_tae_ckpt/%s'%opt.dataset+f'/models/target_trojaned_{opt.type_model}_{i}.model'%i
+            save_path = './train_model_tae_ckpt/%s'%opt.dataset+f'/models/target_trojaned_{opt.type_model}_{i}.model'
         torch.save(netC.state_dict(), save_path)
         print ("benign model saved to %s"%save_path)
 
@@ -591,12 +591,7 @@ def main():
                 pickle.dump(test_dl, file)
 
             print(f'troj_set have been pickled and saved to {pickle_filename}')
-        ASR = []
-        ASI = []
-
-        # Dataset
-        # train_dl = get_dataloader(opt, True)
-        # test_dl = get_dataloader(opt, False)
+ 
 
         # prepare model
         netC, optimizerC, schedulerC = get_model(opt)
@@ -608,13 +603,9 @@ def main():
         best_bd_acc = 0.0
         best_cross_acc = 0.0
         epoch_current = 0
-        # for epoch in range(epoch_current, opt.n_iters):
-        #         print("Epoch {}:".format(epoch + 1))
-        #         adv_train(i, netC, optimizerC, schedulerC, adv_dl, opt)
 
         for epoch in range(epoch_current, opt.n_iters):
                 print("Epoch {}:".format(epoch + 1))
-                # adv_train(i, netC, optimizerC, schedulerC, adv_dl, opt)
                 train(i, netC, optimizerC, schedulerC, train_dl, opt)
                 best_clean_acc, best_bd_acc, best_cross_acc = eval(i,
                 netC,
@@ -626,22 +617,6 @@ def main():
                 best_cross_acc,
                 opt,
                 )
-                # if epoch % 10 == 0:
-
-                # ASR.append(best_bd_acc.item())
-                # average_lower = 0.001
-                # average_upper = 0.004
-                # epsilons = [random.uniform(average_lower, average_upper) for _ in range(10)] 
-                # sap_values = [attack(netC, testloader, eps) for eps in epsilons]
-
-                # ASI.append(sum(sap_values) / len(sap_values) * (0.004 - 0.001))
-
-
-
-    #     ASRs.append(ASR)
-    #     ASIs.append(ASI)
-    # print("ASRs", ASRs)
-    # print("ASIs", ASIs)
 
 
 if __name__ == "__main__":
