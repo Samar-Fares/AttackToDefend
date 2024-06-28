@@ -58,4 +58,17 @@ python models_training/train_IA.py --dataset cifar10
 `A2D.py` takes --task, --attack, --size, arch, --threshold  as arguments. Attacks the target model and detects the Trojaned models based on the SAP value. 
 
 
+## Citation 
+```bibtex
+@InProceedings{Fares_2024_CVPR,
+    author    = {Fares, Samar and Nandakumar, Karthik},
+    title     = {Attack To Defend: Exploiting Adversarial Attacks for Detecting Poisoned Models},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    month     = {June},
+    year      = {2024},
+    pages     = {24726-24735}
+}
+```
+
+
 
