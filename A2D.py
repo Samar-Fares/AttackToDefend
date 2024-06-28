@@ -16,7 +16,7 @@ import torch.utils.data
 from utils_basic import eval_model
 from torchvision import transforms, datasets, models
 from torch.utils.data import DataLoader, Subset
-from bench.utils.aggregate_block.model_trainer_generate import generate_cls_model, generate_cls_trainer
+# from bench.utils.aggregate_block.model_trainer_generate import generate_cls_model, generate_cls_trainer
 
 
 def calculate_distortion(original_image, perturbed_image):
@@ -128,7 +128,7 @@ def get_saps(epsilons, shadow_path, testloader, args):
 
     shadow_model = shadow_model.to('cuda')
     shadow_model.eval()
-    x =  './test/%s/models'%args.task + '/train_benign_0.02_0.model'
+    x =  './test/%s/models'%args.task + '/train_benign_0.model'
     print(f'model is : {x}')
     shadow_model.load_state_dict(torch.load(x))
     epsilon_star = 0
@@ -199,7 +199,6 @@ if __name__ == '__main__':
         adv_examlpes, epsilon_star, distortions = get_saps(epsilons, shadow_path, testloader, args)
         threshold = args.threshold
         sap_values = []
-        count = 0
         # load model and query
         if args.attack == 'lc' or args.attack == 'sig' or args.attack == 'ssba':
             x = f'/home/samar.fares/Project/bench/record/{args.task}_{args.attack}_{i}/attack_result.pt'
@@ -232,7 +231,7 @@ if __name__ == '__main__':
                 count += 1 
             else:
                 print(f'this model is trojaned and predicted as benign')
-        print(f'{count} models out of 50 are correctly classified')
+        print(f'{count} models out of {args.size} are correctly classified')
 
 
 
