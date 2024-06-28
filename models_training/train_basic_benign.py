@@ -84,7 +84,7 @@ def get_arguments():
     parser.add_argument("--lr_C", type=float, default=1e-2)
     parser.add_argument("--schedulerC_milestones", type=list, default=[100, 200, 300, 400])
     parser.add_argument("--schedulerC_lambda", type=float, default=0.1)
-    parser.add_argument("--n_iters", type=int, default=100)
+    parser.add_argument("--n_iters", type=int, default=30)
     parser.add_argument("--num_workers", type=float, default=6)
     parser.add_argument("--target_label", type=int, default=0)
     parser.add_argument("--pc", type=float, default=0.1)
@@ -230,7 +230,7 @@ def eval(i,
         if opt.type_model == 'shadow':
             save_path = './test/%s'%opt.dataset+'/models/train_benign_%d.model'%i
         else:
-            save_path = './test/%s'%opt.dataset+'/models/target_benign_%d.model'%i
+            save_path = './train_model_tae_ckpt/%s'%opt.dataset+'/models/target_benign_%d.model'%i
         torch.save(netC.state_dict(), save_path)
         print ("Benign model saved to %s"%save_path)
     return best_clean_acc, best_bd_acc, best_cross_acc
@@ -313,7 +313,7 @@ def main():
     else:
         raise Exception("Invalid Dataset")
     # pickle the shadow indices for later use
-    shadow_set_path = './test/%s'%opt.dataset+'/shadow_indices_resnet_0.05.pkl'
+    shadow_set_path = './test/%s'%opt.dataset+'/shadow_indices.pkl'
     with open(shadow_set_path, 'wb') as f:
         pickle.dump(shadow_indices, f)
 
