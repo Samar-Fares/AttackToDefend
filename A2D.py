@@ -125,7 +125,9 @@ def get_saps(epsilons, shadow_path, testloader, args):
             shadow_model = models.vgg16(pretrained=False)
             num_ftrs = shadow_model.classifier[6].in_features
             shadow_model.classifier[6] = nn.Linear(num_ftrs, 10)
-
+    elif args.task == "mnist":
+        shadow_model = MnistModel(gpu = True)
+        
     shadow_model = shadow_model.to('cuda')
     shadow_model.eval()
     x =  './test/%s/models'%args.task + '/train_benign_0.model'
