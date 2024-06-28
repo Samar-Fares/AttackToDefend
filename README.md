@@ -44,8 +44,8 @@ Takes --dataset(Cifar10, GTSRB), --type_model(shadow or benign) or (M or B), --a
   <li>Target Trojaned WaNet and IA models</li>
  
  ```
-python models_training/train_WaNet --dataset cifar10
-python models_training/train_IA --dataset cifar10
+python models_training/train_WaNet.py --dataset cifar10
+python models_training/train_IA.py --dataset cifar10
 ```
 </ul>
 
