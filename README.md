@@ -35,7 +35,8 @@ Takes --dataset(Cifar10, GTSRB), --type_model(shadow or benign) or (M or B), --a
 <ul>
   <li>Reference and Target Benign Models</li>
 
-    python models_training/train_basic_benign.py --dataset cifar10 --type_model shadow
+    python models_training/train_basic_benign.py --dataset cifar10 --type_model shadow  --arch resnet
+    python models_training/train_basic_benign.py --dataset cifar10 --type_model target
         
   <li>Target Trojaned models</li>
     
