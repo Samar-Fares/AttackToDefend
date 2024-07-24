@@ -278,7 +278,7 @@ def eval(
         "epoch": epoch,
         "opt": opt,
     }
-    save_path = './train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_IA_%d.model'%16
+    save_path = './train_model_tae_ckpt/%s'%opt.dataset+'/models/target_trojaned_IA_%d.model'%0
     torch.save(netC.state_dict(), save_path)
     print ("wanet model saved to %s"%save_path)
     ckpt_folder = os.path.join(opt.checkpoints, opt.dataset, opt.attack_mode)
