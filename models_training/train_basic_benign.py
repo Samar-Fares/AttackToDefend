@@ -264,7 +264,7 @@ def main():
                 ])
         trainset = torchvision.datasets.CIFAR10(root='./raw_data/', train=True, download=True, transform=transform)
         testset = torchvision.datasets.CIFAR10(root='./raw_data/', train=False, download=True, transform=transform)
-        tot_num = len(testset)
+        tot_num = len(trainset) # or testset based on the defender set
         if opt.type_model == 'shadow':
             shadow_indices = np.random.choice(tot_num, int(tot_num*0.02))
         else:
@@ -283,7 +283,7 @@ def main():
             ])
         trainset = torchvision.datasets.GTSRB(root='./raw_data/', split='train', download=True, transform=transform)
         testset = torchvision.datasets.GTSRB(root='./raw_data/', split='test', download=True, transform=transform)
-        tot_num = len(testset)
+        tot_num = len(trainset)
         if opt.type_model == 'shadow':
             shadow_indices = np.random.choice(tot_num, int(tot_num*0.02))
         else:
@@ -299,7 +299,7 @@ def main():
         dataset = data_loader(root_dir='raw_data\chest')
         trainset = dataset['train']
         testset = dataset['test']
-        tot_num = len(testset)
+        tot_num = len(trainset)
         if opt.type_model == 'shadow':
             shadow_indices = np.random.choice(tot_num, int(tot_num*0.02))
         else:
