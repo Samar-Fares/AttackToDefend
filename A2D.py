@@ -192,6 +192,7 @@ if __name__ == '__main__':
         pickle_filename = './test/%s'%args.task+'/shadow_indices.pkl'
         with open(pickle_filename, 'rb') as file:
             shadow_indices = pickle.load(file)
+        shadow_indices = np.random.choice(shadow_indices, 100) # at least 100 samples
         shadow_set = torch.utils.data.Subset(train_dataset, shadow_indices)
         testloader = DataLoader(shadow_set, batch_size=1, shuffle=True)
         epsilons =   [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
